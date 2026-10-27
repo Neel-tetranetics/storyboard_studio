@@ -1,0 +1,13 @@
+# Packages for the FLUX image worker (flux_worker.py). It runs in its own venv because FLUX.2 Klein needs
+# diffusers 0.39 with transformers 4.x, while the main venv has transformers 5 (used by ComfyUI).
+# Tested venv on this machine: /mnt/newdisk/neel/Text_to_image_model/venv (Python 3.12). Point FLUX_PYTHON at it.
+#
+# Only needed if you build a new FLUX venv (not tested here — this project used the existing venv above):
+#   python3.12 -m venv flux-venv
+#   flux-venv/bin/pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
+#   flux-venv/bin/pip install -r storyboard_studio/requirements-flux.txt
+diffusers==0.39.0
+transformers==4.57.6
+accelerate==1.15.0
+safetensors==0.8.0
+pillow==12.3.0

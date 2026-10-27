@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Storyboard Studio</title>
+<style>
+  :root { --bg:#0e1116; --panel:#161b22; --line:#2a313c; --text:#e6edf3; --mute:#8b949e; --acc:#4f8cff; --warn:#f0b429; --err:#ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { display:flex; gap:12px; align-items:center; padding:12px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:5; }
+  header h1 { font-size:17px; margin:0 12px 0 0; }
+  main { max-width:1280px; margin:0 auto; padding:18px 20px 80px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; }
+  label { color:var(--mute); font-size:12px; display:block; margin:8px 0 4px; }
+  textarea, input[type=text], select { width:100%; background:#0b0e13; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }
+  textarea { resize:vertical; min-height:90px; }
+  button { background:#21262d; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; cursor:pointer; font:inherit; }
+  button:hover { border-color:var(--acc); }
+  button.primary { background:var(--acc); border-color:var(--acc); color:#fff; font-weight:600; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .grow { flex:1; }
+  .status { color:var(--warn); font-size:12px; min-height:16px; }
+  .status.err { color:var(--err); }
+  .card { display:grid; grid-template-columns: 460px 1fr; gap:16px; }
+  .shot { position:relative; background:#0b0e13; border:1px solid var(--line); border-radius:8px; overflow:hidden; aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; color:var(--mute); }
+  .shot.tall { aspect-ratio:9/16; max-height:520px; }
+  .shot img, .shot video { width:100%; height:100%; object-fit:contain; }
+  .tools { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .edit { display:none; gap:6px; margin-top:6px; } .edit.open { display:flex; }
+  .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .head b { font-size:15px; }
+  .add { text-align:center; margin:-6px 0 10px; }
+  .add button { border-style:dashed; background:transparent; color:var(--mute); }
+  .addform { display:none; max-width:640px; margin:0 auto 14px; gap:6px; } .addform.open { display:flex; }
+  .refs { display:flex; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--mute); }
+  .refthumbs { display:flex; gap:10px; flex-wrap:wrap; }
+  .refthumbs img { height:70px; border-radius:6px; border:1px solid var(--line); }
+  .clip video { width:100%; border-radius:6px; margin-top:6px; }
+  #final video { width:100%; border-radius:8px; }
+  .muted { color:var(--mute); }
+  #prog { position:sticky; top:53px; z-index:4; background:#11161d; border-bottom:1px solid var(--line); padding:10px 20px; display:none; }
+  #prog.on { display:block; }
+  .bar { height:8px; background:#0b0e13; border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:6px 0; }
+  .bar > div { height:100%; background:var(--acc); width:0; transition:width .6s; }
+  .bar.steps > div { background:#3fb950; }
+  #prog .cols { display:flex; gap:24px; flex-wrap:wrap; font-size:12px; color:var(--mute); }
+  #prog .cols b { color:var(--text); }
+  #prog ol { margin:4px 0 0 18px; padding:0; }
+  @media (max-width: 900px) { .card { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Storyboard Studio</h1>
+  <select id="projects" style="max-width:420px"></select>
+  <button id="newBtn">New project</button>
+  <span class="grow"></span>
+  <span id="busy" class="muted"></span>
+</header>
+<div id="prog">
+  <div class="row"><b id="pgLabel"></b><span id="pgSub" class="muted"></span><span class="grow"></span><span id="pgTime" class="muted"></span>
+    <button id="pgToggle" style="padding:2px 8px">details</button></div>
+  <div class="bar"><div id="pgBar"></div></div>
+  <div id="pgStepRow" style="display:none"><span id="pgPhase" class="muted"></span><div class="bar steps"><div id="pgStep"></div></div></div>
+  <div id="pgDetails" class="cols" style="display:none">
+    <div><b>Queue</b><ol id="pgQueue"></ol></div>
+    <div><b>Recently finished</b><ol id="pgRecent"></ol></div>
+  </div>
+</div>
+<main>
+  <section id="create" class="panel">
+    <b>New video</b>
+    <label>Prompt</label>
+    <textarea id="brief" placeholder="e.g. 30 second premium commercial for this navy steel watch: dark studio reveal, macro details, water drops, a man in a navy suit at a city window at blue hour, end on a hero shot."></textarea>
+    <div class="row">
+      <div><label>Duration</label><select id="seconds"></select></div>
+      <div><label>Aspect</label><select id="aspect"><option>16:9</option><option>9:16</option></select></div>
+      <div class="grow"><label>Reference photos (optional, up to 4: product, model…)</label><input id="files" type="file" accept="image/png,image/jpeg,image/webp" multiple /></div>
+    </div>
+    <div id="labels"></div>
+    <div class="row" style="margin-top:12px"><button class="primary" id="createBtn">Create storyboard</button><span id="createMsg" class="status"></span></div>
+  </section>
+
+  <section id="project" style="display:none">
+    <div class="panel">
+      <div class="row">
+        <div class="grow"><b id="pbrief"></b><div id="pstatus" class="status"></div></div>
+        <div><label>Video quality</label><select id="quality"></select></div>
+        <div><label>Sound</label><select id="sound"><option value="1">With sound</option><option value="0">Silent</option></select></div>
+        <button class="primary" id="renderBtn">Render final video</button>
+      </div>
+      <div class="refthumbs" id="refthumbs" style="margin-top:10px"></div>
+      <div id="final" style="margin-top:12px"></div>
+    </div>
+    <div id="scenes"></div>
+  </section>
+</main>
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const api = async (path, opts = {}) => {
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+};
+const json = (method, body) => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let P = null, layoutKey = "";
+const dirty = new Set();  // textareas the user has edited but not saved yet
+
+for (let s = 5; s <= 180; s += 5) $("#seconds").insertAdjacentHTML("beforeend", `<option value="${s}" ${s === 30 ? "selected" : ""}>${s} s (${s / 5} scenes)</option>`);
+$("#files").onchange = () => {
+  const fs = [...$("#files").files].slice(0, 4);
+  $("#labels").innerHTML = fs.map((f, i) => `<label>Photo ${i + 1} (${esc(f.name)}) — what is it?</label><input type="text" class="lab" placeholder="${i ? "the product" : "the product / the model"}">`).join("");
+};
+$("#newBtn").onclick = () => { P = null; location.hash = ""; $("#create").style.display = ""; $("#project").style.display = "none"; };
+$("#createBtn").onclick = async () => {
+  const fd = new FormData();
+  fd.append("brief", $("#brief").value);
+  fd.append("seconds", $("#seconds").value);
+  fd.append("aspect", $("#aspect").value);
+  fd.append("labels", JSON.stringify([...document.querySelectorAll(".lab")].map((x) => x.value)));
+  [...$("#files").files].slice(0, 4).forEach((f) => fd.append("files", f));
+  $("#createBtn").disabled = true; $("#createMsg").textContent = "creating…";
+  try { const p = await api("/api/projects", { method: "POST", body: fd }); location.hash = p.id; await refreshList(); await open(p.id); $("#createMsg").textContent = ""; }
+  catch (e) { $("#createMsg").textContent = e.message; }
+  $("#createBtn").disabled = false;
+};
+$("#projects").onchange = () => { if ($("#projects").value) { location.hash = $("#projects").value; open($("#projects").value); } };
+$("#quality").onchange = () => api(`/api/projects/${P.id}`, json("PATCH", { quality: $("#quality").value }));
+$("#sound").onchange = () => api(`/api/projects/${P.id}`, json("PATCH", { sound: $("#sound").value === "1" }));
+$("#renderBtn").onclick = () => act(() => api(`/api/projects/${P.id}/render`, { method: "POST" }));
+
+const QUALITY_LABELS = { final: "Final 768p (~1.5 min/clip)", fast: "Fast 768p (~10 s faster)", draft: "Draft 544p (~2x faster)",
+                         hq: "High quality 8-step (~2.5 min/clip)" };
+api("/api/options").then((o) => { $("#quality").innerHTML = o.qualities.map((q) => `<option value="${q}">${QUALITY_LABELS[q] || q}</option>`).join("");
+                                  if (P) $("#quality").value = P.quality; });
+async function refreshList() {
+  const list = await api("/api/projects");
+  $("#projects").innerHTML = `<option value="">— projects —</option>` + list.map((p) => `<option value="${p.id}">${esc(p.id)} · ${esc(p.brief)}</option>`).join("");
+  if (P) $("#projects").value = P.id;
+}
+async function open(id) {
+  P = await api(`/api/projects/${id}`); layoutKey = ""; dirty.clear();
+  $("#create").style.display = "none"; $("#project").style.display = "";
+  $("#quality").value = P.quality; $("#sound").value = P.sound ? "1" : "0";
+  draw();
+}
+async function act(fn) { try { await fn(); await poll(); } catch (e) { alert(e.message); } }
+const file = (rel) => rel ? `/files/${P.id}/${rel}` : "";
+
+function draw() {
+  $("#pbrief").textContent = P.brief;
+  const st = $("#pstatus"); st.textContent = P.status || ""; st.className = "status" + ((P.status || "").startsWith("error") ? " err" : "");
+  $("#refthumbs").innerHTML = P.refs.map((r, i) => `<div><img src="${file(r.path)}"><div class="muted">${i + 1}: ${esc(r.label)}</div></div>`).join("");
+  $("#final").innerHTML = P.final ? `<video controls src="${file(P.final)}"></video><div class="row"><a href="${file(P.final)}" download>Download ${esc(P.final)}</a></div>` : "";
+  const key = P.scenes.map((s) => s.id).join(",") + "|" + P.refs.length + "|" + P.aspect;
+  if (key !== layoutKey) { layoutKey = key; buildScenes(); }
+  P.scenes.forEach(patchScene);
+}
+
+function buildScenes() {
+  const box = $("#scenes");
+  const add = (after) => `<div class="add"><button data-add="${after || ""}">+ add scene here</button></div>
+    <div class="addform" id="af-${after || "start"}"><input type="text" placeholder="Idea for the new shot (optional) — Gemini writes the prompts" class="grow">
+    <button data-addgo="${after || ""}">Add</button><button data-addblank="${after || ""}">Add blank</button></div>`;
+  box.innerHTML = add(null) + P.scenes.map((s, i) => `
+    <div class="panel" id="sc-${s.id}">
+      <div class="head"><b>Scene ${i + 1}</b><div class="row">
+        <span class="status" data-st></span>
+        <button data-mv="-1" title="Move up">↑</button><button data-mv="1" title="Move down">↓</button><button data-del title="Delete scene">✕</button></div></div>
+      <div class="card">
+        <div>
+          <div class="shot ${P.aspect === "9:16" ? "tall" : ""}" data-shot>no image yet</div>
+          <div class="tools">
+            <button data-regen>Regenerate</button>
+            <button data-edittoggle>Edit image…</button>
+            <label style="margin:0"><input type="file" accept="image/png,image/jpeg,image/webp" data-up hidden><span class="button-like"><button onclick="this.parentElement.previousElementSibling.click()">Upload</button></span></label>
+            <button data-undo>Undo</button>
+            <button data-redo>Redo</button>
+          </div>
+          <div class="edit"><input type="text" placeholder="e.g. make the background darker, move the watch to the left" class="grow" data-instr><button data-edit>Apply</button></div>
+          <div class="refs" data-refs>${P.refs.map((r, k) => `<label style="margin:0"><input type="checkbox" value="${k + 1}"> use photo ${k + 1}</label>`).join("")}</div>
+        </div>
+        <div>
+          <label>Image prompt (first frame)</label><textarea data-f="image_prompt"></textarea>
+          <label>Video prompt (motion from that frame — goes to the video model)</label><textarea data-f="video_prompt"></textarea>
+          <div class="row" style="margin-top:8px"><button data-clip>Render this clip</button><span class="muted" data-cliphint></span></div>
+          <div class="clip" data-clipbox></div>
+        </div>
+      </div>
+    </div>` + add(s.id)).join("");
+  box.querySelectorAll("[data-add]").forEach((b) => b.onclick = () => $(`#af-${b.dataset.add || "start"}`).classList.toggle("open"));
+  box.querySelectorAll("[data-addgo],[data-addblank]").forEach((b) => b.onclick = () => {
+    const after = b.dataset.addgo ?? b.dataset.addblank;
+    const idea = b.parentElement.querySelector("input").value;
+    const body = b.dataset.addgo !== undefined ? { after, idea } : { after, image_prompt: " ", video_prompt: "", generate: false };
+    act(() => api(`/api/projects/${P.id}/scenes`, json("POST", body)));
+  });
+  P.scenes.forEach((s) => {
+    const el = $(`#sc-${s.id}`), url = `/api/projects/${P.id}/scenes/${s.id}`;
+    el.querySelectorAll("textarea").forEach((t) => {
+      t.oninput = () => dirty.add(`${s.id}:${t.dataset.f}`);
+      t.onblur = () => { if (dirty.has(`${s.id}:${t.dataset.f}`)) act(async () => { await api(url, json("PATCH", { [t.dataset.f]: t.value })); dirty.delete(`${s.id}:${t.dataset.f}`); }); };
+    });
+    const flush = async () => { for (const t of el.querySelectorAll("textarea")) if (dirty.has(`${s.id}:${t.dataset.f}`)) { await api(url, json("PATCH", { [t.dataset.f]: t.value })); dirty.delete(`${s.id}:${t.dataset.f}`); } };
+    $("[data-regen]", el).onclick = () => act(async () => { await flush(); await api(`${url}/image`, json("POST", { mode: "regenerate" })); });
+    $("[data-edittoggle]", el).onclick = () => $(".edit", el).classList.toggle("open");
+    $("[data-edit]", el).onclick = () => act(() => api(`${url}/image`, json("POST", { mode: "edit", instruction: $("[data-instr]", el).value })));
+    $("[data-up]", el).onchange = (e) => { const fd = new FormData(); fd.append("file", e.target.files[0]); act(() => api(`${url}/upload`, { method: "POST", body: fd })); };
+    $("[data-undo]", el).onclick = () => act(() => api(`${url}/undo`, { method: "POST" }));
+    $("[data-redo]", el).onclick = () => act(() => api(`${url}/redo`, { method: "POST" }));
+    $("[data-clip]", el).onclick = () => act(async () => { await flush(); await api(`${url}/clip`, { method: "POST" }); });
+    $("[data-del]", el).onclick = () => { if (confirm("Delete this scene?")) act(() => api(url, { method: "DELETE" })); };
+    el.querySelectorAll("[data-mv]").forEach((b) => b.onclick = () => act(() => api(`${url}/move`, json("POST", { dir: +b.dataset.mv }))));
+    el.querySelectorAll("[data-refs] input").forEach((c) => c.onchange = () =>
+      act(() => api(url, json("PATCH", { refs: [...el.querySelectorAll("[data-refs] input:checked")].map((x) => +x.value) }))));
+  });
+}
+
+function patchScene(s) {
+  const el = $(`#sc-${s.id}`); if (!el) return;
+  const st = $("[data-st]", el); st.textContent = s.status || ""; st.className = "status" + ((s.status || "").startsWith("error") ? " err" : "");
+  const shot = $("[data-shot]", el), src = file(s.image);
+  if (s.image && shot.dataset.src !== src) { shot.dataset.src = src; shot.innerHTML = `<img src="${src}">`; }
+  if (!s.image && !shot.dataset.src) shot.textContent = s.status || "no image yet";
+  el.querySelectorAll("textarea").forEach((t) => { if (!dirty.has(`${s.id}:${t.dataset.f}`) && document.activeElement !== t && t.value !== s[t.dataset.f]) t.value = s[t.dataset.f]; });
+  el.querySelectorAll("[data-refs] input").forEach((c) => { c.checked = s.refs.includes(+c.value); });
+  $("[data-undo]", el).disabled = !s.history.length;
+  $("[data-redo]", el).disabled = !(s.future || []).length;
+  const box = $("[data-clipbox]", el), csrc = file(s.clip);
+  if (box.dataset.src !== csrc) { box.dataset.src = csrc; box.innerHTML = s.clip ? `<video controls src="${csrc}"></video>` : ""; }
+  $("[data-cliphint]", el).textContent = s.clip ? "clip ready (re-render after edits)" : "";
+}
+
+async function poll() {
+  if (!P) return;
+  try { P = await api(`/api/projects/${P.id}`); draw(); } catch (e) {}
+}
+setInterval(poll, 2000);
+refreshList().then(() => { if (location.hash.length > 1) open(location.hash.slice(1)); });
+
+// ---- live progress of the running job (any project) ----
+const fmt = (s) => s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s` : `${s}s`;
+$("#pgToggle").onclick = () => { const d = $("#pgDetails"); d.style.display = d.style.display === "none" ? "flex" : "none"; };
+async function pollProgress() {
+  let g; try { g = await api("/api/progress"); } catch (e) { return; }
+  const c = g.current, box = $("#prog");
+  box.classList.toggle("on", !!(c || g.queue.length));
+  $("#busy").textContent = c ? "working" : (g.queue.length ? `${g.queue.length} queued` : "idle");
+  if (c) {
+    $("#pgLabel").textContent = c.label;
+    $("#pgSub").textContent = [c.sub, c.project && P && c.project !== P.id ? `(project ${c.project})` : ""].filter(Boolean).join(" ");
+    $("#pgTime").textContent = `elapsed ${fmt(c.elapsed)} · ~${fmt(c.eta)} left`;
+    $("#pgBar").style.width = `${c.pct}%`;
+    const steps = c.steps > 0;
+    $("#pgStepRow").style.display = c.phase ? "" : "none";
+    $("#pgPhase").textContent = c.phase + (steps ? ` — step ${c.step}/${c.steps}` : "");
+    $("#pgStep").style.width = steps ? `${Math.round(100 * c.step / c.steps)}%` : "0";
+  } else {
+    $("#pgLabel").textContent = "Waiting"; $("#pgSub").textContent = ""; $("#pgTime").textContent = ""; $("#pgBar").style.width = "0"; $("#pgStepRow").style.display = "none";
+  }
+  $("#pgQueue").innerHTML = g.queue.map((q) => `<li>${esc(q)}</li>`).join("") || "<li>empty</li>";
+  $("#pgRecent").innerHTML = g.recent.map((r) => `<li>${esc(r.label)} — ${r.secs}s ${r.result === "done" ? "" : `<span style="color:var(--err)">${esc(r.result)}</span>`}</li>`).join("") || "<li>none yet</li>";
+}
+setInterval(pollProgress, 1500);
+pollProgress();
+</script>
+</body>
+</html>
